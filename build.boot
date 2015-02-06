@@ -2,7 +2,7 @@
   :source-paths   #{"src"}
   :resource-paths #{"resources"}
   :dependencies '[[org.clojure/clojure  "1.6.0"     :scope "provided"]
-                  [boot/core            "2.0.0-rc8" :scope "provided"]
+                  [boot/core            "2.0.0-rc9" :scope "provided"]
                   [clj.rb               "0.3.0"]
                   [adzerk/bootlaces     "0.1.9"     :scope "test"]])
 
