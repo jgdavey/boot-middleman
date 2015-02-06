@@ -34,32 +34,55 @@
 
 (def script (-> "middleman_build.rb" io/resource slurp))
 
+(defn- changed [before after]
+  (->> (boot/fileset-diff before after :hash)
+       boot/input-files
+       (filter #(.startsWith (:path %) "source/"))
+       seq))
+
+(defn- should-build? [before after]
+  (if before
+    (changed before after)
+    true))
+
 (deftask middleman
-  "Dir can be provided, or it defaults to ./assets"
+  "Build middleman application.
+
+  Assumes a source directory, not the root of the project, contains
+  the middleman project structure. By default, this directory is `assets`,
+  but you can override using the :dir option, or -d from the commandline.
+
+  When used after the `watch` built-in boot task, only builds when
+  files with the `<middleman-dir>/source` directory change.
+
+  Respects middleman's config.rb, with the exception of :build_dir."
   [d dir DIR str "directory of middleman app (defaults to assets)"
    e env ENV str "middleman environment (defaults to development)"]
   (let [root (or dir "assets")
         root-dir (.getAbsolutePath (io/file root))
-        _ (boot/set-env! :resource-paths #(conj % root))
+        _ (boot/set-env! :source-paths #(conj % root))
         env (or env "development")
         pod (pod/make-pod (-> (boot/get-env)
-                              (update-in [:dependencies] conj ['clj.rb clj-rb-version])
-                              (update-in [:resource-paths] conj root)))
+                              (update-in [:dependencies] conj ['clj.rb clj-rb-version])))
+        prev (atom nil)
         target (boot/temp-dir!)]
     (prepare-runtime pod)
     (boot/with-pre-wrap fileset
-      (pod/with-eval-in pod
-        (require
-          '[clj.rb :as rb]
-          '[clojure.java.io :as io])
-        (let [rt (rb/runtime {:preserve-locals? true})]
-          (try
-            (rb/setenv rt "MM_ENV" ~env)
-            (rb/setenv rt "MM_ROOT" ~root-dir)
-            (rb/setenv rt "MM_BUILD" ~(.getAbsolutePath target))
-            (rb/eval rt ~script)
-            (finally
-              (rb/shutdown-runtime rt)))))
+      (when (should-build? @prev fileset)
+        (println "Building middleman, based on" (map :path (changed @prev fileset)))
+        (pod/with-eval-in pod
+          (require
+            '[clj.rb :as rb]
+            '[clojure.java.io :as io])
+          (let [rt (rb/runtime {:preserve-locals? true})]
+            (try
+              (rb/setenv rt "MM_ENV" ~env)
+              (rb/setenv rt "MM_ROOT" ~root-dir)
+              (rb/setenv rt "MM_BUILD" ~(.getAbsolutePath target))
+              (rb/eval rt ~script)
+              (finally
+                (rb/shutdown-runtime rt))))))
+      (reset! prev fileset)
       (-> fileset
           (boot/add-resource target)
           boot/commit!))))
