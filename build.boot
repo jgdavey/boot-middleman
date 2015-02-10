@@ -8,14 +8,14 @@
 
 (require '[adzerk.bootlaces :refer :all])
 
-(def +version+ "0.0.1")
+(def +version+ "0.0.2-SNAPSHOT")
 
 (bootlaces! +version+)
 
 (task-options!
  pom  {:project     'com.joshuadavey/boot-middleman
        :version     +version+
-       :description "Boot task to compile haml to html"
-       :url         "https://github.com/jgdavey/boot-haml"
-       :scm         {:url "https://github.com/jgdavey/boot-haml"}
+       :description "Boot task to compile a middleman project"
+       :url         "https://github.com/jgdavey/boot-middleman"
+       :scm         {:url "https://github.com/jgdavey/boot-middleman"}
        :license     {"Eclipse Public License" "http://www.eclipse.org/legal/epl-v10.html"}})
