@@ -3,7 +3,11 @@
   (:require [clojure.java.io :as io]
             [boot.core :as boot :refer [deftask]]
             [boot.pod :as pod])
-  (:import java.util.Properties))
+  (:import [java.util Properties]
+           [java.io File]))
+
+(defonce ^:private default-gem-dir
+  (str (File. (System/getProperty "user.dir") ".gems")))
 
 (defonce ^:private clj-rb-version
   (let [props (doto (Properties.)
@@ -25,10 +29,11 @@
     (require
       '[clj.rb :as rb]
       '[clojure.java.io :as io])
-    (let [rt (rb/runtime {:preserve-locals? true})]
+    (let [rt (rb/runtime {:gem-paths [~default-gem-dir]
+                          :env {"GEM_HOME" ~default-gem-dir}})]
       (try
         (doseq [[name version] ~gems]
-          (rb/install-gem rt name version))
+          (rb/install-gem rt name version {:install-dir ~default-gem-dir}))
         (finally
           (rb/shutdown-runtime rt))))))
 
@@ -74,7 +79,7 @@
           (require
             '[clj.rb :as rb]
             '[clojure.java.io :as io])
-          (let [rt (rb/runtime {:preserve-locals? true})]
+          (let [rt (rb/runtime {:gem-paths [~default-gem-dir]})]
             (try
               (rb/setenv rt "MM_ENV" ~env)
               (rb/setenv rt "MM_ROOT" ~root-dir)
