@@ -16,26 +16,25 @@
                          io/reader)))]
     (.getProperty props "version")))
 
-(defonce ^:private gems [["middleman-core" "3.3.7"]
-                         ["middleman-sprockets" "3.4.1"]
-                         ["haml" "4.0.5"]
-                         ["sass" "3.4.11"]
-                         ["compass-import-once" "1.0.5"]
-                         ["compass" "1.0.3"]
-                         ["kramdown" "1.5.0"]])
+(def prepare-script (-> "middleman_prepare.rb" io/resource slurp))
 
-(defn prepare-runtime [pod]
+(defn- make-pod []
+  (pod/make-pod (-> (boot/get-env)
+                    (update-in [:dependencies] conj ['clj.rb clj-rb-version]))))
+
+(defn- prepare-runtime [pod dir]
   (pod/with-eval-in pod
     (require
       '[clj.rb :as rb]
       '[clojure.java.io :as io])
     (let [rt (rb/runtime {:gem-paths [~default-gem-dir]
-                          :env {"GEM_HOME" ~default-gem-dir}})]
+                          :env {"GEM_HOME" ~default-gem-dir
+                                "MM_ROOT" ~dir}})]
       (try
-        (doseq [[name version] ~gems]
-          (rb/install-gem rt name version {:install-dir ~default-gem-dir}))
+        (rb/install-gem rt "bundler" "1.8.2")
+        (rb/eval rt ~prepare-script)
         (finally
-          (rb/shutdown-runtime rt))))))
+          (.terminate rt))))))
 
 (def script (-> "middleman_build.rb" io/resource slurp))
 
@@ -67,23 +66,22 @@
         root-dir (.getAbsolutePath (io/file root))
         _ (boot/set-env! :source-paths #(conj % root))
         env (or env "development")
-        pod (pod/make-pod (-> (boot/get-env)
-                              (update-in [:dependencies] conj ['clj.rb clj-rb-version])))
+        pod (make-pod)
         prev (atom nil)
         target (boot/temp-dir!)]
-    (prepare-runtime pod)
+    (prepare-runtime pod root-dir)
     (boot/with-pre-wrap fileset
       (when (should-build? @prev fileset)
-        (println "Building middleman, based on" (map :path (changed @prev fileset)))
+        (println "<< Building middleman, based on" (map :path (changed @prev fileset)) " >>")
         (pod/with-eval-in pod
           (require
             '[clj.rb :as rb]
             '[clojure.java.io :as io])
-          (let [rt (rb/runtime {:gem-paths [~default-gem-dir]})]
+          (let [rt (rb/runtime {:gem-paths [~default-gem-dir]
+                                :env {"MM_ENV" ~env
+                                      "MM_ROOT" ~root-dir
+                                      "MM_BUILD" ~(.getAbsolutePath target)}})]
             (try
-              (rb/setenv rt "MM_ENV" ~env)
-              (rb/setenv rt "MM_ROOT" ~root-dir)
-              (rb/setenv rt "MM_BUILD" ~(.getAbsolutePath target))
               (rb/eval rt ~script)
               (finally
                 (rb/shutdown-runtime rt))))))
