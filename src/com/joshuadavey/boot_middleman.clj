@@ -68,7 +68,7 @@
         env (or env "development")
         pod (make-pod)
         prev (atom nil)
-        target (boot/temp-dir!)]
+        target (boot/tmp-dir!)]
     (prepare-runtime pod root-dir)
     (boot/with-pre-wrap fileset
       (when (should-build? @prev fileset)
