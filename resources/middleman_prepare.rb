@@ -12,6 +12,7 @@ end
 
 if missing
   puts "<< Installing missing middleman dependencies to #{ENV["GEM_HOME"]} >>"
+  Bundler.settings[:jobs] = 4
   Bundler.clear_gemspec_cache
   Bundler.reset!
   Gem.load_env_plugins if Gem.respond_to?(:load_env_plugins)
