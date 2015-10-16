@@ -31,7 +31,7 @@
                           :env {"GEM_HOME" ~default-gem-dir
                                 "MM_ROOT" ~dir}})]
       (try
-        (rb/install-gem rt "bundler" "1.8.2")
+        (rb/install-gem rt "bundler" "1.10.6")
         (rb/eval rt ~prepare-script)
         (finally
           (.terminate rt))))))
@@ -82,6 +82,7 @@
                                       "MM_ROOT" ~root-dir
                                       "MM_BUILD" ~(.getAbsolutePath target)}})]
             (try
+              (rb/require rt "bundler/setup")
               (rb/eval rt ~script)
               (finally
                 (rb/shutdown-runtime rt))))))
