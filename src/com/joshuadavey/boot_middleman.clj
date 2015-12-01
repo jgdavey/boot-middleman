@@ -20,7 +20,7 @@
 
 (defn- make-pod []
   (pod/make-pod (-> (boot/get-env)
-                    (update-in [:dependencies] conj ['clj.rb clj-rb-version]))))
+                    (assoc :dependencies [['clj.rb clj-rb-version]]))))
 
 (defn- prepare-runtime [pod dir]
   (pod/with-eval-in pod
