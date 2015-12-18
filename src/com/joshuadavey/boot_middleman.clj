@@ -61,14 +61,16 @@
 
   Respects middleman's config.rb, with the exception of :build_dir."
   [d dir DIR str "directory of middleman app (defaults to assets)"
-   e env ENV str "middleman environment (defaults to development)"]
+   e env ENV str "middleman environment (defaults to development)"
+   o out OUT str "middleman output directory (relative to target, defaults to target)"]
   (let [root (or dir "assets")
         root-dir (.getAbsolutePath (io/file root))
         _ (boot/set-env! :source-paths #(conj % root))
         env (or env "development")
         pod (make-pod)
         prev (atom nil)
-        target (boot/tmp-dir!)]
+        target (boot/tmp-dir!)
+        output-dir (.toString (.resolve (.toPath target) (or out ".")))]
     (prepare-runtime pod root-dir)
     (boot/with-pre-wrap fileset
       (when (should-build? @prev fileset)
@@ -80,7 +82,7 @@
           (let [rt (rb/runtime {:gem-paths [~default-gem-dir]
                                 :env {"MM_ENV" ~env
                                       "MM_ROOT" ~root-dir
-                                      "MM_BUILD" ~(.getAbsolutePath target)}})]
+                                      "MM_BUILD" ~output-dir}})]
             (try
               (rb/require rt "bundler/setup")
               (rb/eval rt ~script)
